@@ -1,5 +1,8 @@
 package com.osama;
 
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -14,34 +17,46 @@ public class StudentController {
     }
 
     @GetMapping
-    public List<Student> getAll() {
-        return repository.findAll();
+    public ResponseEntity<List<Student>> getAll() {
+        return ResponseEntity.ok(repository.findAll());
     }
 
     @GetMapping("/{id}")
-    public Student getById(@PathVariable int id) {
-        return repository.findById(id).orElse(null);
+    public ResponseEntity<?> getById(@PathVariable int id) {
+        Student student = repository.findById(id).orElse(null);
+        if (student == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Student with id " + id + " not found");
+        }
+        return ResponseEntity.ok(student);
     }
 
     @PostMapping
-    public Student addStudent(@RequestBody Student student) {
-        return repository.save(student);
+    public ResponseEntity<Student> addStudent(@Valid @RequestBody Student student) {
+        Student saved = repository.save(student);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PutMapping("/{id}")
-    public Student updateStudent(@PathVariable int id, @RequestBody Student updated) {
+    public ResponseEntity<?> updateStudent(@PathVariable int id, @Valid @RequestBody Student updated) {
         Student student = repository.findById(id).orElse(null);
-        if (student != null) {
-            student.setName(updated.getName());
-            student.setGrade(updated.getGrade());
-            return repository.save(student);
+        if (student == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Student with id " + id + " not found");
         }
-        return null;
+        student.setName(updated.getName());
+        student.setGrade(updated.getGrade());
+        return ResponseEntity.ok(repository.save(student));
     }
 
     @DeleteMapping("/{id}")
-    public String deleteStudent(@PathVariable int id) {
+    public ResponseEntity<?> deleteStudent(@PathVariable int id) {
+        if (!repository.existsById(id)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Student with id " + id + " not found");
+        }
         repository.deleteById(id);
-        return "Deleted student " + id;
+        return ResponseEntity.status(HttpStatus.OK)
+                .body("Deleted student " + id);
     }
 }
